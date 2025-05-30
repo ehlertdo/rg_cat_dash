@@ -190,13 +190,14 @@ def update_histogram(class_value):
     Output('scatterplot-fig', 'figure'),
     Input('scatterplot-button', 'value'))
 def update_scatterplot(yaxis_parameter):
-    fig = px.scatter(cat[mask * mask_class], x='D', y=yaxis_parameter, color='Lsyn', color_continuous_scale='plasma', template='plotly_white', size_max=20, size='RmaxEV', hover_data={'NED_id': True, 'Lsyn': True, 'Rmax': True}, log_x=True, labels={'D': '<i>D</i><sub>lumi</sub> [Mpc]', 'Pcav': 'log <i>P</i><sub>cav</sub> [erg / s]', 'Lsyn': 'log <i>L</i><sub>syn</sub> [erg / s]', 'Lcr': 'log <i>L</i><sub>CR</sub> [erg / s]', 'Rmax': 'log <i>R</i><sub>max</sub> [eV]'})
+    fig = px.scatter(cat[mask * mask_class], x='D', y=yaxis_parameter, color='Lsyn', color_continuous_scale='plasma', template='plotly_white', size_max=20, size='RmaxEV', custom_data={'NED_id': True, 'Lsyn': True, 'Lcr': True, 'Rmax': True}, log_x=True, labels={'D': '<i>D</i><sub>lumi</sub> [Mpc]', 'Pcav': 'log <i>P</i><sub>cav</sub> [erg / s]', 'Lsyn': 'log <i>L</i><sub>syn</sub> [erg / s]', 'Lcr': 'log <i>L</i><sub>CR</sub> [erg / s]', 'Rmax': 'log <i>R</i><sub>max</sub> [eV]'})
     fig.update_traces(marker_sizemin=3,
                       selector=dict(type='scatter'),
                       hovertemplate=("<b>%{customdata[0]}</b><br>" + "<i>D</i><sub>lumi</sub> [Mpc] = %{x:.2f}<br>" +
                                      "log <i>P</i><sub>cav</sub> [erg / s] = %{y:.2f}<br>" +
                                      "log <i>L</i><sub>syn</sub> [erg / s] = %{customdata[1]:.2f}<br>" +
-                                     "log <i>R</i><sub>max</sub> [eV] = %{customdata[2]:.2f}"))
+                                     "log <i>L</i><sub>CR</sub> [erg / s] = %{customdata[2]:.2f}<br>" +
+                                     "log <i>R</i><sub>max</sub> [eV] = %{customdata[3]:.2f}"))
     fig.update_layout(coloraxis_colorbar=dict(orientation='h', title_side='right'))
     return fig
 
