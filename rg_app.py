@@ -1,33 +1,21 @@
 from dash import Dash, html, dash_table, dcc, Input, Output, callback
 from dash.dash_table.Format import Format, Scheme
 import plotly.express as px
+import numpy as np
 import pandas as pd
 
 # ------------------ GENERATE CONTENT ------------------
 # getting data
 cat = pd.read_csv('assets/rg_cat_processed.csv')
-mask = (cat['D'] <= 500)
-mask_class = (cat['class'] == 'j')
 cat['RmaxEV'] = 10**(cat['Rmax'] - 18)
-
-# fig = px.scatter(cat[mask * mask_class], x='D', y='Pcav', color='Lsyn', color_continuous_scale='plasma', template='plotly_white', size_max=20, size='RmaxEV', hover_data={'NED_id': True, 'Lsyn': True, 'Rmax': True}, log_x=True, range_y=[41.5, 47], height=600, labels={'D': '<i>D</i><sub>lumi</sub> [Mpc]', 'Pcav': 'log <i>P</i><sub>cav</sub> [erg / s]', 'Lsyn': 'log <i>L</i><sub>syn</sub> [erg / s]'})
-# fig.update_traces(marker_sizemin=3,
-#                   selector=dict(type='scatter'),
-#                   hovertemplate=("<b>%{customdata[0]}</b><br>" + "<i>D</i><sub>lumi</sub> [Mpc] = %{x:.2f}<br>" +
-#                                  "log <i>P</i><sub>cav</sub> [erg / s] = %{y:.2f}<br>" +
-#                                  "log <i>L</i><sub>syn</sub> [erg / s] = %{customdata[1]:.2f}<br>" +
-#                                  "log <i>R</i><sub>max</sub> [eV] = %{customdata[2]:.2f}"))
-# fig.update_layout(coloraxis_colorbar=dict(orientation='h', title_side='right'))
 
 cat['class'] = cat['class'].replace({'j': 'jetted', 'u': 'unknown', 'g': 'SFG', 'p': 'point src'})
 
-
-# fig2 = px.histogram(cat, x='D', color='class', template='plotly_white', marginal="rug", height=600, labels={'D': '<i>D</i><sub>lumi</sub> [Mpc]', 'class': 'Object Type'})
 # ------------------------------------------------------
-# [['NED_id', 'class', 'zdist', 'D', 'Fsyn', 'Lsyn', 'Rmax']]
 # initialise app
 app = Dash(__name__)
-app.title ='Radio Galaxy Catalog'
+app.title = 'Radio Galaxy Catalog'
+
 # add content to app
 app.layout = [
     html.Div([
@@ -138,33 +126,81 @@ app.layout = [
             className="button two columns",
             style={'marginTop': '4vh'}),
         html.Div([
-            dcc.Graph(id='histogram-fig', style={"width": "100%", "height": "40vh"})], className="ten columns"),
+            dcc.Graph(id='histogram-fig', style={"width": "100%", "height": "600px"})], className="ten columns"),
         html.H2('Source Luminosity / Power / Maximum Rigidity'),
-        dcc.RadioItems(
-            options=[
-                {
-                    'label': [html.Span("P"), html.Sub("cav")],
-                    'value': 'Pcav'
-                },
-                {
-                    'label': [html.Span("L"), html.Sub("syn")],
-                    'value': 'Lsyn'
-                },
-                {
-                    'label': [html.Span("L"), html.Sub("CR")],
-                    'value': 'Lcr'
-                },
-                {
-                    'label': [html.Span("R"), html.Sub("max")],
-                    'value': 'Rmax'
-                },
-            ],
-            value='Pcav',
-            id='scatterplot-button',
-            className="button two columns",
-            style={'marginTop': '4vh'}),
         html.Div([
-            dcc.Graph(id='scatterplot-fig', style={"width": "100%", "height": "60vh"})], className="ten columns"),
+            html.Label(
+                'x Scale',
+                className="label",
+                style={'marginTop': '4vh'}),
+            html.Br(),
+            dcc.RadioItems(
+                options=[
+                    {
+                        'label': 'lin',
+                        'value': False
+                    },
+                    {
+                        'label': 'log',
+                        'value': True
+                    },
+                ],
+                value=True,
+                id='scatterplot-xscale-button',
+                className="button",
+                style={'marginTop': '0.3vh'}),
+            html.Br(),
+            html.Label(
+                'y Axis',
+                className="label",
+                style={'marginTop': '2vh'}),
+            html.Br(),
+            dcc.RadioItems(
+                options=[
+                    {
+                        'label': [html.Span("P"), html.Sub("cav")],
+                        'value': 'Pcav'
+                    },
+                    {
+                        'label': [html.Span("L"), html.Sub("syn")],
+                        'value': 'Lsyn'
+                    },
+                    {
+                        'label': [html.Span("L"), html.Sub("CR")],
+                        'value': 'Lcr'
+                    },
+                    {
+                        'label': [html.Span("R"), html.Sub("max")],
+                        'value': 'Rmax'
+                    },
+                ],
+                value='Pcav',
+                id='scatterplot-yaxis-button',
+                className="button",
+                style={'marginTop': '0.3vh'}),
+            html.Label(
+                'Object Type',
+                className="label",
+                style={'marginTop': '2vh'}),
+            html.Br(),
+            dcc.Slider(
+                min=0, max=4, step=1, value=3,
+                vertical=True,
+                verticalHeight=300,
+                id="scatterplot-class-slider",
+                marks={
+                    4: "All",
+                    3: "Jetted",
+                    2: "Unknown",
+                    1: "SFG",
+                    0: "Point Source"
+                },
+                included=False,
+                updatemode='drag',
+                className="slider")
+        ], className="two columns"),
+        html.Div([
+            dcc.Graph(id='scatterplot-fig', style={"width": "100%", "height": "850px"})], className="ten columns"),
     ], style={'padding': '2vw'}),
 ]
 
@@ -172,25 +208,30 @@ app.layout = [
 @callback(
     Output('histogram-fig', 'figure'),
     Input('class-button', 'value'))
-def update_histogram(class_value):
-    if class_value == 'All':
+def update_histogram(class_label):
+    color_dict = {'Jetted': '#636EFA', 'Unknown': '#EF553B', 'SFG': '#00CC96', 'Point Source': '#AB63FA'}
+    if class_label == 'All':
         fig = px.histogram(cat, x='D', color='class', template='plotly_white', marginal="rug", labels={'D': '<i>D</i><sub>lumi</sub> [Mpc]', 'class': 'Object Type'})
-    elif class_value == 'Jetted':
-        fig = px.histogram(cat[cat['class'] == 'jetted'], x='D', color_discrete_sequence=['#636EFA'], template='plotly_white', marginal="rug", labels={'D': '<i>D</i><sub>lumi</sub> [Mpc]', 'class': 'Object Type'})
-    elif class_value == 'Unknown':
-        fig = px.histogram(cat[cat['class'] == 'unknown'], x='D', color_discrete_sequence=['#EF553B'], template='plotly_white', marginal="rug", labels={'D': '<i>D</i><sub>lumi</sub> [Mpc]', 'class': 'Object Type'})
-    elif class_value == 'SFG':
-        fig = px.histogram(cat[cat['class'] == 'SFG'], x='D', color_discrete_sequence=['#00CC96'], template='plotly_white', marginal="rug", labels={'D': '<i>D</i><sub>lumi</sub> [Mpc]', 'class': 'Object Type'})
-    elif class_value == 'Point Source':
-        fig = px.histogram(cat[cat['class'] == 'point src'], x='D', color_discrete_sequence=['#AB63FA'], template='plotly_white', marginal="rug", labels={'D': '<i>D</i><sub>lumi</sub> [Mpc]', 'class': 'Object Type'})
+    else:
+        mask_class = cat['class'] == str.lower(class_label).replace('sfg', 'SFG').replace('point source', 'point src')
+        fig = px.histogram(cat[mask_class], x='D', color_discrete_sequence=[color_dict[class_label]], template='plotly_white', marginal="rug", labels={'D': '<i>D</i><sub>lumi</sub> [Mpc]', 'class': 'Object Type'})
     return fig
 
 
 @callback(
     Output('scatterplot-fig', 'figure'),
-    Input('scatterplot-button', 'value'))
-def update_scatterplot(yaxis_parameter):
-    fig = px.scatter(cat[mask * mask_class], x='D', y=yaxis_parameter, color='Lsyn', color_continuous_scale='plasma', template='plotly_white', size_max=20, size='RmaxEV', custom_data={'NED_id': True, 'Lsyn': True, 'Lcr': True, 'Rmax': True}, log_x=True, labels={'D': '<i>D</i><sub>lumi</sub> [Mpc]', 'Pcav': 'log <i>P</i><sub>cav</sub> [erg / s]', 'Lsyn': 'log <i>L</i><sub>syn</sub> [erg / s]', 'Lcr': 'log <i>L</i><sub>CR</sub> [erg / s]', 'Rmax': 'log <i>R</i><sub>max</sub> [eV]'})
+    Input('scatterplot-yaxis-button', 'value'),
+    Input('scatterplot-class-slider', 'value'),
+    Input('scatterplot-xscale-button', 'value'))
+def update_scatterplot(yaxis_parameter, class_value, x_scale):
+    # mask = (cat['D'] <= 500)
+    class_dict = {4: 'all', 3: 'jetted', 2: 'unknown', 1: 'SFG', 0: 'point src'}
+    class_label = class_dict[class_value]
+    if class_label == 'all':
+        mask_class = np.ones(len(cat), dtype=bool)
+    else:
+        mask_class = (cat['class'] == class_label)
+    fig = px.scatter(cat[mask_class], x='D', y=yaxis_parameter, color='Lsyn', color_continuous_scale='plasma', template='plotly_white', size_max=20, size='RmaxEV', custom_data={'NED_id': True, 'Lsyn': True, 'Lcr': True, 'Rmax': True}, log_x=x_scale, labels={'D': '<i>D</i><sub>lumi</sub> [Mpc]', 'Pcav': 'log <i>P</i><sub>cav</sub> [erg / s]', 'Lsyn': 'log <i>L</i><sub>syn</sub> [erg / s]', 'Lcr': 'log <i>L</i><sub>CR</sub> [erg / s]', 'Rmax': 'log <i>R</i><sub>max</sub> [eV]'})
     fig.update_traces(marker_sizemin=3,
                       selector=dict(type='scatter'),
                       hovertemplate=("<b>%{customdata[0]}</b><br>" + "<i>D</i><sub>lumi</sub> [Mpc] = %{x:.2f}<br>" +
