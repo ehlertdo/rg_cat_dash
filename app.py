@@ -1,15 +1,15 @@
 from dash import Dash, html, dash_table, dcc, Input, Output, callback
 from dash.dash_table.Format import Format, Scheme
 import plotly.express as px
-import numpy as np
-import pandas as pd
+from numpy import log10, ones
+from pandas import read_csv
 
 # ------------------ GENERATE CONTENT ------------------
 # getting data
-cat = pd.read_csv('assets/rg_cat_processed.csv')
+cat = read_csv('assets/rg_cat_processed.csv')
 cat['RmaxEV'] = 10**(cat['Rmax'] - 18)
-cat['logFsyn'] = np.log10(cat['Fsyn'])
-cat['logFcr'] = np.log10(cat['Fcr'])
+cat['logFsyn'] = log10(cat['Fsyn'])
+cat['logFcr'] = log10(cat['Fcr'])
 
 cat['class'] = cat['class'].replace({'j': 'jetted', 'u': 'unknown', 'g': 'SFG', 'p': 'point src'})
 
@@ -250,7 +250,7 @@ def update_scatterplot(yaxis_parameter, class_value, x_scale):
     class_dict = {4: 'all', 3: 'jetted', 2: 'unknown', 1: 'SFG', 0: 'point src'}
     class_label = class_dict[class_value]
     if class_label == 'all':
-        mask_class = np.ones(len(cat), dtype=bool)
+        mask_class = ones(len(cat), dtype=bool)
     else:
         mask_class = (cat['class'] == class_label)
     fig = px.scatter(cat[mask_class], x='D', y=yaxis_parameter, color='Lsyn', color_continuous_scale='plasma', template='plotly_white', size='RmaxEV', custom_data={'NED_id': True, 'Lsyn': True, 'Lcr': True, 'Rmax': True}, log_x=x_scale, labels={'D': '<i>D</i><sub>lumi</sub> [Mpc]', 'Pcav': 'log <i>P</i><sub>cav</sub> [erg / s]', 'Lsyn': 'log <i>L</i><sub>syn</sub> [erg / s]', 'Lcr': 'log <i>L</i><sub>CR</sub> [erg / s]', 'Rmax': 'log <i>R</i><sub>max</sub> [eV]', 'logFsyn': 'log <i>F</i><sub>syn</sub> [erg / s / cm<sup>2</sup>]', 'logFcr': 'log <i>F</i><sub>CR</sub> [erg / s / cm<sup>2</sup>]'})
@@ -266,4 +266,5 @@ def update_scatterplot(yaxis_parameter, class_value, x_scale):
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Bind to 0.0.0.0 so the container can receive external traffic
+    app.run_server(host="0.0.0.0", port=8080, debug=False)
