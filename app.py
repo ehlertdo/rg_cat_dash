@@ -40,7 +40,7 @@ app.layout = [
                 html.P('Special key:', className='label'),
                 html.Ul(id='table-key', children=[
                     html.Li(['F/L', html.Sub('syn'), ': synthetic 1.1GHz flux / luminosity (extrapol. from 843MHz (SUMSS) or 1.4GHz (NVSS))'], className='tight'),
-                    html.Li(['P', html.Sub('cav'), ': cavity / jet power calculated as in ', html.A('Bell et al. 2018', href='https://arxiv.org/abs/1805.01902')], className='tight'),
+                    html.Li(['P', html.Sub('cav'), ': cavity / jet power calculated as in ', html.A('Matthews et al. 2018', href='https://arxiv.org/abs/1805.01902')], className='tight'),
                     html.Li(['R', html.Sub('max'), ': maximum rigidity inferred from the jet power'], className='tight')
                 ])
             ]),
